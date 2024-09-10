@@ -1,0 +1,27 @@
+body {
+    margin: 0;
+    }
+
+h1 {
+    font-size: 100px;
+    color: rgb(227, 105, 105);
+    text-align: center;
+    display: flex;
+    justify-content: center;
+}
+
+
+
+.signup {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: 300px;
+    gap: 25px;
+  
+}
+
+.form {
+    width: 300px;
+    gap: 25px;
+}
