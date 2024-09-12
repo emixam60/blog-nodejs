@@ -1,7 +1,6 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const query = require("./db.js");
-
 const router = express();
 const port = 8080;
 const argon2 = require("argon2");
@@ -33,12 +32,54 @@ router.get("/users/:id", async (req, res) => {
   if (isNaN(id)) {
     return res.status(400).send("L'id doit être un entier.");
   }
-  const result = await query("select * from users where id = $1", [id]);
+  const result = await query("select * from users where id_user = $1", [id]);
   if (result.rowCount === 0) {
     return res.status(404).send("utilisateur non trouvé");
   }
   res.send(result.rows[0]);
 });
+
+//-----------------------------------------get an article-----------------------------------------------------
+
+router.get("/articles", async (_req, res) => {
+  try {
+    const result =
+      await query(`SELECT users.user_name AS author, title, date_at, image FROM articles
+      INNER JOIN users ON articles.id_user = users.id_user`);
+
+    if (result.rowCount === 0) {
+      return res.status(404).send("Articles non trouvés");
+    }
+    return res.status(200).send(result.rows);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).send("Erreur");
+  }
+});
+
+//------------------------------get an article by id---------------------------------------------
+
+router.get("/articles/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).send("L'ID de l'article doit être un entier.");
+    }
+    const result = await query(
+      `SELECT users.user_name AS author, title, article, date_at, image FROM articles
+INNER JOIN users ON articles.id_user = users.id_user WHERE articles.id_article = $1`,
+      [id]
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).send("Articles non trouvés");
+    }
+    return res.status(200).send(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).send("Erreur");
+  }
+});
+
 // ----------------------------------------------------create a new user--------------------------------------------------------
 router.post("/users", async (req, res) => {
   const { user_name, email, password } = req.body;
@@ -85,6 +126,52 @@ router.post("/users", async (req, res) => {
   }
 });
 
+//--------------------------------creation d'un articles-------------------------------------------------
+
+router.post("/articles", async (req, res) => {
+  const { author, article, title, image } = req.body;
+
+  if (!author ^ !article ^ !title ^ !image) {
+    return res.status(400).send("Veuillez insérer les données requises ");
+  } else {
+    let authorId = parseInt(author);
+    if (isNaN(authorId)) {
+      const userExist = await query(
+        "select id_user from users where user_name = $1",
+        [author]
+      );
+      if (userExist.rowCount === 0) {
+        return res.status(404).send("l'utilisateur n'existe pas");
+      }
+      authorId = userExist.rows[0].id_user;
+    } else {
+      const userExist = await query(
+        "select from users where id_user = $1",
+        [authorId]
+      );
+      if (userExist.rowCount === 0) {
+        return res.status(404).send("l'utilisateur n'existe pas");
+      }
+      try {
+        const result = await query(
+          "INSERT INTO articles (id_user, article, title, image) VALUES ($1, $2, $3, $4) RETURNING *",
+          [authorId, article, title, image]
+        );
+        res.status(201).send(result.rows[0]);
+      } catch (err) {
+        console.error(err);
+        res
+          .status(500)
+          .send(
+            "Erreur lors de l'ajout de l'article."
+          );
+      }
+    }
+  }
+});
+
+//----------------------Connexion user-----------------------------------
+
 router.post("/signin", async (req, res) => {
   const { email, password } = req.body;
   if (!email ^ !password) {
@@ -92,8 +179,10 @@ router.post("/signin", async (req, res) => {
       .status(400)
       .send("Veuillez entrez une adresse email et un mot de passe");
   }
-
-  if (!/^(?=.*\d)(?=.*[A-Z])(?=.*[a-z])(?=.*[^\w\d\s:])([^\s]){8,16}$/.test(password)
+  if (
+    !/^(?=.*\d)(?=.*[A-Z])(?=.*[a-z])(?=.*[^\w\d\s:])([^\s]){8,16}$/.test(
+      password
+    )
   ) {
     const errpwd = "Mot de passe invalide";
     return res.status(400).send({ message: errpwd });
@@ -103,12 +192,15 @@ router.post("/signin", async (req, res) => {
   }
 
   try {
-    const userExist = await query("select password from users where email = $1",[email]);
-     if (userExist.rowCount === 0) {
+    const userExist = await query(
+      "select password from users where email = $1",
+      [email]
+    );
+    if (userExist.rowCount === 0) {
       return res.status(404).send("l'utilisateur n'existe pas");
     }
     const user = userExist.rows[0];
-    
+
     if (await argon2.verify(user.password, password)) {
       return res.status(200).send("Connexion réussie");
     } else {
@@ -118,41 +210,4 @@ router.post("/signin", async (req, res) => {
     res.status(500).send("Erreur systeme");
     console.error(err);
   }
-});
-
-
-router.get("/articles", async (req, res) => {
-  try {
-    const result = await query("SELECT * FROM articles");
-    
-    if (result.rowCount === 0) {
-      return res.status(404).send("Articles non trouvés");
-    }
-    return res.status(200).send(result.rows);
-    
-  } catch (err) {
-    console.error(err);
-    return res.status(500).send("Erreur");
-  }
-});
-
-
-
-router.get("/articles/:id", async (req, res) => {
-
-try {
-  const id = parseInt(req.params.id);
-  if (isNaN(id)) {
-    return res.status(400).send("L'ID de l'article doit être un entier.");
-  }
-  const result = await query("SELECT article FROM articles WHERE id_article = $1", [id]);
-  if (result.rowCount === 0) {
-    return res.status(404).send("Article non trouvé");
-  }
-  return res.status(200).send(result.rows[0]);
-  
-} catch (err) {
-  console.error(err);
-  return res.status(500).send("Erreur serveur");
-}
 });

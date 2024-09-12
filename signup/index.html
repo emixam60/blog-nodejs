@@ -7,21 +7,42 @@
     <title>Document</title>
   </head>
   <body>
-    <header>
-      <h1>Mon blog</h1>
-    </header>
+    <header></header>
     <main>
-      <div class="signup">
-        <form class="form">
-            <label for="Email"></label>
-            <input type="text" name="email" placeholder="Adresse e-mail">
-            <label for="password"></label>
-            <input type="password" name="password" placeholder="Mot de passe">
+      <h1>Mon Zoo Blog</h1>
+      <div>
+        <form action="/signup" method="POST">
+          <label for="email"></label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            placeholder="Email"
+            required
+          />
+          <label for="password"></label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="Mot de passe"
+            required
+          />
+          <p>Le mot de passe doit conetenir :</p>
+          <ul>
+            <li>Une majuscule</li>
+            <li>Une minuscule</li>
+            <li>Un chiffre</li>
+            <li>Un caractère spéciale</li>
+          </ul>  
+          <button type="submit">S'inscrire</button>
         </form>
-        <button>S'inscrire</button>
+      </div>
+      <div>
+        <p>Déja inscrit? <a href="">Connectez vous</a></p>
       </div>
     </main>
-
+  
     <script src="./script.js"></script>
   </body>
 </html>
